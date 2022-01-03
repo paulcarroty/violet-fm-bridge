@@ -503,7 +503,7 @@ static int handle_cancelSearch()
 
 static int handle_getRSSI()
 {
-    int rmssi;
+    int rmssi = 0;
     int err = vendor_interface->get_fm_ctrl(V4L2_CID_PRV_IRIS_RMSSI, &rmssi);
     if (err == 0) {
         RESPOND("%d", rmssi);
