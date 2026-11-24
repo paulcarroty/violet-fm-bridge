@@ -10,21 +10,46 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
       - name: Install Android NDK r23b
+        if: runner.arch == 'X64'
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;23.1.7779620"
       - name: Build for Android 9
+        if: runner.arch == 'X64'
         run: |
           "$ANDROID_HOME/ndk/23.1.7779620/ndk-build" \
             APP_BUILD_SCRIPT=./Android.mk \
             NDK_PROJECT_PATH=. \
             APP_PLATFORM=android-28
+      - name: Set up x86-64 emulation
+        if: runner.arch == 'ARM64'
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: amd64
+      - name: Build for Android 9 on ARM64
+        if: runner.arch == 'ARM64'
+        run: |
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/work" -w /work ubuntu:24.04 bash -euc '
+              apt-get update -qq
+              apt-get install -y -qq ca-certificates curl unzip
+              curl -fsSL -o /tmp/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r23b-linux.zip
+              unzip -q /tmp/android-ndk.zip -d /tmp
+              /tmp/android-ndk-r23b/ndk-build \
+                APP_BUILD_SCRIPT=./Android.mk \
+                NDK_PROJECT_PATH=. \
+                APP_PLATFORM=android-28
+            '
       - name: Upload binaries
         uses: actions/upload-artifact@v7
         with:
-          name: fm-bridge-android-9
+          name: fm-bridge-android-9-${{ matrix.runner }}
           path: libs/
           if-no-files-found: error
