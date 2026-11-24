@@ -1,0 +1,30 @@
+name: Android build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Android NDK r23b
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;23.1.7779620"
+      - name: Build for Android 9
+        run: |
+          "$ANDROID_HOME/ndk/23.1.7779620/ndk-build" \
+            APP_BUILD_SCRIPT=./Android.mk \
+            NDK_PROJECT_PATH=. \
+            APP_PLATFORM=android-28
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: fm-bridge-android-9
+          path: libs/
+          if-no-files-found: error
